@@ -1,6 +1,8 @@
 package com.nvsstagemanagement.nvs_stage_management.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
@@ -11,13 +13,15 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
-@Table(name = "Tasks")
 public class Task {
     @Id
+    @Size(max = 50)
     @Nationalized
     @Column(name = "TaskID", nullable = false, length = 50)
     private String taskID;
 
+    @Size(max = 255)
+    @NotNull
     @Nationalized
     @Column(name = "Title", nullable = false)
     private String title;
@@ -27,14 +31,17 @@ public class Task {
     @Column(name = "Description")
     private String description;
 
+    @Size(max = 50)
     @Nationalized
     @Column(name = "Assignee", length = 50)
     private String assignee;
 
+    @Size(max = 50)
     @Nationalized
     @Column(name = "Priority", length = 50)
     private String priority;
 
+    @Size(max = 50)
     @Nationalized
     @Column(name = "Tag", length = 50)
     private String tag;
@@ -50,6 +57,7 @@ public class Task {
     @Column(name = "EndDate")
     private LocalDate endDate;
 
+    @Size(max = 50)
     @Nationalized
     @ColumnDefault("'Pending'")
     @Column(name = "Status", length = 50)

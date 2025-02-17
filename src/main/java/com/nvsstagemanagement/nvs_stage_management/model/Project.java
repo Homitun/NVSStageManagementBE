@@ -1,6 +1,11 @@
 package com.nvsstagemanagement.nvs_stage_management.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Nationalized;
@@ -10,13 +15,15 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "Projects")
 public class Project {
     @Id
+    @Size(max = 50)
     @Nationalized
     @Column(name = "ProjectID", nullable = false, length = 50)
     private String projectID;
 
+    @Size(max = 255)
+    @NotNull
     @Nationalized
     @Column(name = "Title", nullable = false)
     private String title;
@@ -37,10 +44,12 @@ public class Project {
     @Column(name = "EndTime")
     private Instant endTime;
 
+    @Size(max = 255)
     @Nationalized
     @Column(name = "Department")
     private String department;
 
+    @Size(max = 50)
     @Nationalized
     @Column(name = "CreatedBy", length = 50)
     private String createdBy;
