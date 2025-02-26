@@ -1,16 +1,27 @@
 package com.nvsstagemanagement.nvs_stage_management.service.impl;
 
 import com.nvsstagemanagement.nvs_stage_management.dto.authentication.AuthenticatedUserDTO;
-import com.nvsstagemanagement.nvs_stage_management.dto.config.JwtGenerator;
-import com.nvsstagemanagement.nvs_stage_management.dto.exception.InvalidValueException;
-import com.nvsstagemanagement.nvs_stage_management.dto.exception.NotFoundException;
+//import com.nvsstagemanagement.nvs_stage_management.dto.config.JwtGenerator;
+//import com.nvsstagemanagement.nvs_stage_management.dto.exception.InvalidValueException;
+//import com.nvsstagemanagement.nvs_stage_management.dto.exception.NotFoundException;
+import com.nvsstagemanagement.nvs_stage_management.dto.request.UserCreationRequest;
+import com.nvsstagemanagement.nvs_stage_management.dto.request.UserUpdateRequest;
+import com.nvsstagemanagement.nvs_stage_management.dto.response.UserResponse;
 import com.nvsstagemanagement.nvs_stage_management.dto.user.UserDTO;
+import com.nvsstagemanagement.nvs_stage_management.exception.AppException;
+import com.nvsstagemanagement.nvs_stage_management.exception.ErrorCode;
+import com.nvsstagemanagement.nvs_stage_management.mapper.UserMapper;
+import com.nvsstagemanagement.nvs_stage_management.model.Role;
 import com.nvsstagemanagement.nvs_stage_management.model.User;
 import com.nvsstagemanagement.nvs_stage_management.repository.DepartmentRepository;
 import com.nvsstagemanagement.nvs_stage_management.repository.RoleRepository;
 import com.nvsstagemanagement.nvs_stage_management.repository.UserRepository;
 import com.nvsstagemanagement.nvs_stage_management.service.IUserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -21,60 +32,78 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.GrantedAuthority;
+import com.nvsstagemanagement.nvs_stage_management.constant.PredefinedRole;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService implements IUserService {
-    private final UserRepository userRepository;
+
     private final DepartmentRepository departmentRepository;
-    private final RoleRepository roleRepository;
+
     private final ModelMapper modelMapper;
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    private JwtGenerator jwtGenerator;
-    private PasswordEncoder passwordEncoder;
-//    private LoggerService loggerService;
+    UserRepository userRepository;
+    RoleRepository roleRepository;
+    UserMapper userMapper;
+    PasswordEncoder passwordEncoder;
 
-    @Override
-    public List<UserDTO> getAllUser() {
-        List<User> users = userRepository.findAll();
+    public UserResponse createUser(UserCreationRequest request) {
+        User user = userMapper.toUser(request);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        return users.stream()
-                .map(user -> modelMapper.map(user, UserDTO.class))
-                .collect(Collectors.toList());
-    }
+        Role role = new Role();
+        roleRepository.findById(PredefinedRole.STAFF_ROLE);
 
-    @Override
-    public List<UserDTO> getUserByName(String name) {
-        List<User> users = userRepository.findAll();
+        user.setRole(role);
 
-        users.removeIf((u) -> !(u.getFullName().contains(name)));
-        return users.stream()
-                .map(user -> modelMapper.map(user, UserDTO.class))
-                .collect(Collectors.toList());
-
-    }
-
-    @Override
-    public AuthenticatedUserDTO login(User user) {
-        User u = userRepository.findByEmail(user.getEmail()).orElseThrow(() -> new NotFoundException("Không tồn tại tài khoản này"));
-        if(u.getStatus().equals("Inactive")) {
-            throw new InvalidValueException("Tài khoản đã bị khóa");
+        try {
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException exception) {
+            throw new AppException(ErrorCode.USER_EXISTED);
         }
-        Authentication authentication = authenticationManager
-                .authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtGenerator.generateToken(authentication);
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
 
-        AuthenticatedUserDTO authenticatedUser = new AuthenticatedUserDTO();
-        authenticatedUser.setToken(token);
-        authenticatedUser.setRoles(roles);
-        return authenticatedUser;
+        return userMapper.toUserResponse(user);
+    }
+
+    public UserResponse getMyInfo() {
+        var context = SecurityContextHolder.getContext();
+        String name = context.getAuthentication().getName();
+
+        User user = userRepository.findByEmail(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        return userMapper.toUserResponse(user);
+    }
+
+    @PostAuthorize("returnObject.username == authentication.name")
+    public UserResponse updateUser(String userId, UserUpdateRequest request) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        userMapper.updateUser(user, request);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+// to update
+//        Role role = roleRepository.findAllById(request.getRole());
+//        user.setRole(role);
+
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteUser(String userId) {
+        userRepository.deleteById(userId);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<UserResponse> getUsers() {
+        log.info("In method get Users");
+        return userRepository.findAll().stream().map(userMapper::toUserResponse).toList();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse getUser(String id) {
+        return userMapper.toUserResponse(
+                userRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
 }
