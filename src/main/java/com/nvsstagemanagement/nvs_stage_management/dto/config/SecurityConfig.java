@@ -31,7 +31,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
         .csrf((a) -> a.disable())
-        .cors((a) -> a.disable())
+        .cors((a) -> a.configurationSource(corsConfigurationSource())) // ✅ Bật CORS
         .exceptionHandling((ex) -> ex.authenticationEntryPoint(jwtAuthEntryPoint))
         .sessionManagement((session)-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
