@@ -50,17 +50,16 @@ public class UserService implements IUserService {
     private final DepartmentRepository departmentRepository;
 
     private final ModelMapper modelMapper;
-    UserRepository userRepository;
-    RoleRepository roleRepository;
-    UserMapper userMapper;
-    PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final UserMapper userMapper;
+     private final PasswordEncoder passwordEncoder;
 
     public UserResponse createUser(UserCreationRequest request) {
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        Role role = new Role();
-        roleRepository.findById(PredefinedRole.STAFF_ROLE);
+        Role role = roleRepository.findByRoleName(PredefinedRole.STAFF_ROLE);
 
         user.setRole(role);
 
@@ -82,7 +81,7 @@ public class UserService implements IUserService {
         var context = SecurityContextHolder.getContext();
         String name = context.getAuthentication().getName();
 
-        User user = userRepository.findByEmail(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        User user = userRepository.findByFullName(name).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         return userMapper.toUserResponse(user);
     }

@@ -1,6 +1,5 @@
 package com.nvsstagemanagement.nvs_stage_management.config;
 
-
 import com.nimbusds.jose.JOSEException;
 import com.nvsstagemanagement.nvs_stage_management.dto.request.IntrospectRequest;
 import com.nvsstagemanagement.nvs_stage_management.service.AuthenticationService;
@@ -19,33 +18,49 @@ import java.util.Objects;
 
 @Component
 public class CustomJwtDecoder implements JwtDecoder {
-    @Value("${jwt.signerKey}")
-    private String signerKey;
+
+    private final String signerKey;
+    private final AuthenticationService authenticationService;
+    private NimbusJwtDecoder nimbusJwtDecoder;
 
     @Autowired
-    private AuthenticationService authenticationService;
+    public CustomJwtDecoder(@Value("${jwt.signerKey}") String signerKey,
+                            AuthenticationService authenticationService) {
+        this.signerKey = signerKey;
+        this.authenticationService = authenticationService;
+        initJwtDecoder();
+    }
 
-    private NimbusJwtDecoder nimbusJwtDecoder = null;
+    private void initJwtDecoder() {
+        SecretKeySpec secretKeySpec = new SecretKeySpec(signerKey.getBytes(), "HmacSHA512");
+        this.nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec)
+                .macAlgorithm(MacAlgorithm.HS512)
+                .build();
+    }
 
     @Override
     public Jwt decode(String token) throws JwtException {
-
         try {
-            var response = authenticationService.introspect(
-                    IntrospectRequest.builder().token(token).build());
+            System.out.println("Decoding Token: " + token);
 
-            if (!response.isValid()) throw new JwtException("Token invalid");
+            var response = authenticationService.introspect(
+                    IntrospectRequest.builder().token(token).build()
+            );
+
+            System.out.println("Introspection Response: " + response);
+
+            if (!response.isValid()) {
+                System.out.println("Token invalid");
+                throw new JwtException("Token invalid");
+            }
+
         } catch (JOSEException | ParseException e) {
+            System.out.println("Error decoding Token: " + e.getMessage());
             throw new JwtException(e.getMessage());
         }
 
-        if (Objects.isNull(nimbusJwtDecoder)) {
-            SecretKeySpec secretKeySpec = new SecretKeySpec(signerKey.getBytes(), "HS512");
-            nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec)
-                    .macAlgorithm(MacAlgorithm.HS512)
-                    .build();
-        }
-
-        return nimbusJwtDecoder.decode(token);
+        Jwt decodedJwt = nimbusJwtDecoder.decode(token);
+        System.out.println("Token verified successfully: " + decodedJwt.getSubject());
+        return decodedJwt;
     }
 }
