@@ -18,29 +18,18 @@ import com.nvsstagemanagement.nvs_stage_management.repository.RoleRepository;
 import com.nvsstagemanagement.nvs_stage_management.repository.UserRepository;
 import com.nvsstagemanagement.nvs_stage_management.service.IUserService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.security.core.GrantedAuthority;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Collections;
 import com.nvsstagemanagement.nvs_stage_management.constant.PredefinedRole;
-import java.util.HashSet;
+
 import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -48,13 +37,30 @@ import java.util.stream.Collectors;
 public class UserService implements IUserService {
 
     private final DepartmentRepository departmentRepository;
-
     private final ModelMapper modelMapper;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
      private final PasswordEncoder passwordEncoder;
 
+
+    //    private LoggerService loggerService;
+    @Override
+    public List<UserDTO> getAllUser() {
+        return List.of();
+    }
+
+    @Override
+    public List<UserDTO> getUserByName(String name) {
+        return List.of();
+    }
+
+    @Override
+    public AuthenticatedUserDTO login(User user) {
+        return null;
+    }
+
+    @Override
     public UserResponse createUser(UserCreationRequest request) {
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -71,11 +77,7 @@ public class UserService implements IUserService {
 
         return userMapper.toUserResponse(user);
     }
-    @Autowired
-    private final AuthenticationManager authenticationManager;
-    private final JwtGenerator jwtGenerator;
-    private final PasswordEncoder passwordEncoder;
-//    private LoggerService loggerService;
+
 
     public UserResponse getMyInfo() {
         var context = SecurityContextHolder.getContext();

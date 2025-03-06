@@ -15,10 +15,10 @@ public interface IUserService {
     List<UserDTO> getAllUser();
     List<UserDTO> getUserByName(String name);
     AuthenticatedUserDTO login(User user);
-    AuthenticatedUserDTO createUser(UserDTO userDTO);
+    //AuthenticatedUserDTO createUser(UserDTO userDTO);
 
 
-    UserResponse createUser(UserCreationRequest request);
+    UserResponse createUser_tuan(UserCreationRequest request);
 
     UserResponse getMyInfo();
 
